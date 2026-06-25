@@ -1,0 +1,1033 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SciRun — Science-Driven Running Tracker</title>
+<style>
+  :root {
+    --bg: #0a0e1a;
+    --surface: #111827;
+    --surface2: #1a2235;
+    --border: #1e2d45;
+    --accent: #3b82f6;
+    --accent2: #10b981;
+    --accent3: #f59e0b;
+    --accent4: #8b5cf6;
+    --text: #e2e8f0;
+    --muted: #64748b;
+    --danger: #ef4444;
+    --phys: #3b82f6;
+    --chem: #10b981;
+    --bio: #8b5cf6;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    min-height: 100vh;
+  }
+  header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 16px 24px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .logo {
+    font-size: 1.5rem;
+    font-weight: 800;
+    background: linear-gradient(135deg, var(--phys), var(--chem), var(--bio));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .tagline { color: var(--muted); font-size: 0.8rem; }
+  nav {
+    margin-left: auto;
+    display: flex;
+    gap: 8px;
+  }
+  .nav-btn {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    padding: 6px 14px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    transition: all 0.2s;
+  }
+  .nav-btn.active, .nav-btn:hover {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: white;
+  }
+  main { max-width: 1100px; margin: 0 auto; padding: 24px; }
+
+  /* VIEWS */
+  .view { display: none; }
+  .view.active { display: block; }
+
+  /* CARDS */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 24px;
+    margin-bottom: 20px;
+  }
+  .card h2 {
+    font-size: 1rem;
+    font-weight: 700;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+
+  /* FORM */
+  .form-group { margin-bottom: 16px; }
+  label { display: block; font-size: 0.8rem; color: var(--muted); margin-bottom: 6px; }
+  input, select, textarea {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 10px 14px;
+    border-radius: 10px;
+    font-size: 0.9rem;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  input:focus, select:focus { border-color: var(--accent); }
+  .btn {
+    background: var(--accent);
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 10px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.2s;
+    width: 100%;
+  }
+  .btn:hover { opacity: 0.85; }
+
+  /* SCIENCE BADGES */
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+  }
+  .badge.phys { background: rgba(59,130,246,0.15); color: var(--phys); border: 1px solid rgba(59,130,246,0.3); }
+  .badge.chem { background: rgba(16,185,129,0.15); color: var(--chem); border: 1px solid rgba(16,185,129,0.3); }
+  .badge.bio  { background: rgba(139,92,246,0.15);  color: var(--bio);  border: 1px solid rgba(139,92,246,0.3); }
+
+  /* SCIENCE BREAKDOWN PANEL */
+  .sci-panel {
+    background: var(--surface2);
+    border-radius: 12px;
+    padding: 16px;
+    margin-top: 8px;
+  }
+  .sci-panel h3 {
+    font-size: 0.85rem;
+    font-weight: 700;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .sci-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 10px;
+    gap: 12px;
+  }
+  .sci-row-label { font-size: 0.8rem; color: var(--muted); flex: 1; }
+  .sci-row-val { font-size: 0.9rem; font-weight: 700; text-align: right; }
+  .sci-row-formula {
+    font-size: 0.72rem;
+    color: var(--muted);
+    font-style: italic;
+    text-align: right;
+  }
+  .concept-box {
+    background: rgba(255,255,255,0.03);
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-top: 10px;
+    font-size: 0.8rem;
+    color: var(--muted);
+    line-height: 1.5;
+    border-left: 3px solid;
+  }
+  .concept-box.phys { border-color: var(--phys); }
+  .concept-box.chem { border-color: var(--chem); }
+  .concept-box.bio  { border-color: var(--bio); }
+
+  /* STAT CARDS */
+  .stat-card {
+    background: var(--surface2);
+    border-radius: 12px;
+    padding: 16px;
+    text-align: center;
+  }
+  .stat-num { font-size: 1.8rem; font-weight: 800; }
+  .stat-label { font-size: 0.75rem; color: var(--muted); margin-top: 4px; }
+
+  /* RUN LIST */
+  .run-item {
+    background: var(--surface2);
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 12px;
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: border-color 0.2s;
+  }
+  .run-item:hover { border-color: var(--accent); }
+  .run-item-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+  .run-item-title { font-weight: 700; }
+  .run-item-date { font-size: 0.78rem; color: var(--muted); }
+  .run-item-stats { display: flex; gap: 16px; }
+  .run-stat { font-size: 0.82rem; color: var(--muted); }
+  .run-stat span { color: var(--text); font-weight: 600; }
+
+  /* MODAL */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.7);
+    z-index: 200;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: var(--surface);
+    border-radius: 20px;
+    padding: 28px;
+    max-width: 720px;
+    width: 100%;
+    max-height: 90vh;
+    overflow-y: auto;
+    border: 1px solid var(--border);
+  }
+  .modal-title {
+    font-size: 1.2rem;
+    font-weight: 800;
+    margin-bottom: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .close-btn {
+    background: var(--surface2);
+    border: none;
+    color: var(--muted);
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 1rem;
+  }
+
+  /* ZONES */
+  .zone-bar {
+    height: 8px;
+    border-radius: 4px;
+    background: var(--border);
+    margin: 6px 0 16px;
+    overflow: hidden;
+  }
+  .zone-fill { height: 100%; border-radius: 4px; transition: width 0.4s; }
+
+  /* PROGRESS */
+  .progress-ring { position: relative; display: inline-block; }
+  canvas { display: block; }
+
+  /* EMPTY STATE */
+  .empty { text-align: center; padding: 60px 20px; color: var(--muted); }
+  .empty-icon { font-size: 3rem; margin-bottom: 12px; }
+
+  /* TICKER */
+  .fact-ticker {
+    background: linear-gradient(135deg, rgba(59,130,246,0.1), rgba(16,185,129,0.1), rgba(139,92,246,0.1));
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 18px;
+    margin-bottom: 20px;
+    font-size: 0.85rem;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  /* RESPONSIVE */
+  @media (max-width: 700px) {
+    .grid2, .grid3 { grid-template-columns: 1fr; }
+    nav .nav-btn { padding: 6px 10px; font-size: 0.78rem; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <div class="logo">⚗️ SciRun</div>
+    <div class="tagline">Physics · Chemistry · Biology · Every Step Explained</div>
+  </div>
+  <nav>
+    <button class="nav-btn active" onclick="showView('dashboard')">Dashboard</button>
+    <button class="nav-btn" onclick="showView('log')">Log Run</button>
+    <button class="nav-btn" onclick="showView('history')">History</button>
+    <button class="nav-btn" onclick="showView('concepts')">Science Lab</button>
+  </nav>
+</header>
+
+<main>
+  <!-- DASHBOARD -->
+  <div id="view-dashboard" class="view active">
+    <div class="fact-ticker" id="factTicker">
+      <span>🔬</span>
+      <span id="factText">Loading today's science fact...</span>
+    </div>
+
+    <div class="grid3" style="margin-bottom:20px">
+      <div class="stat-card">
+        <div class="stat-num" id="totalRuns">0</div>
+        <div class="stat-label">Total Runs</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-num" id="totalMiles">0.0</div>
+        <div class="stat-label">Total Miles</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-num" id="totalKcal">0</div>
+        <div class="stat-label">kcal Burned (est.)</div>
+      </div>
+    </div>
+
+    <div class="grid2">
+      <div class="card">
+        <h2>⚡ Physics Output</h2>
+        <div class="sci-panel">
+          <div class="sci-row">
+            <div>
+              <div class="sci-row-label">Total Work Done (Joules)</div>
+              <div class="sci-row-formula">W = F·d = m·g·μ·d</div>
+            </div>
+            <div>
+              <div class="sci-row-val" style="color:var(--phys)" id="dash-work">—</div>
+            </div>
+          </div>
+          <div class="sci-row">
+            <div>
+              <div class="sci-row-label">Average Power Output</div>
+              <div class="sci-row-formula">P = W/t (Watts)</div>
+            </div>
+            <div>
+              <div class="sci-row-val" style="color:var(--phys)" id="dash-power">—</div>
+            </div>
+          </div>
+          <div class="sci-row">
+            <div>
+              <div class="sci-row-label">Avg Kinetic Energy (stride)</div>
+              <div class="sci-row-formula">KE = ½mv²</div>
+            </div>
+            <div>
+              <div class="sci-row-val" style="color:var(--phys)" id="dash-ke">—</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>🧪 Chemistry Output</h2>
+        <div class="sci-panel">
+          <div class="sci-row">
+            <div>
+              <div class="sci-row-label">ATP Molecules Produced (est.)</div>
+              <div class="sci-row-formula">~38 ATP per glucose via aerobic resp.</div>
+            </div>
+            <div>
+              <div class="sci-row-val" style="color:var(--chem)" id="dash-atp">—</div>
+            </div>
+          </div>
+          <div class="sci-row">
+            <div>
+              <div class="sci-row-label">O₂ Consumed (liters)</div>
+              <div class="sci-row-formula">~1L O₂ ≈ 5 kcal</div>
+            </div>
+            <div>
+              <div class="sci-row-val" style="color:var(--chem)" id="dash-o2">—</div>
+            </div>
+          </div>
+          <div class="sci-row">
+            <div>
+              <div class="sci-row-label">CO₂ Produced (liters)</div>
+              <div class="sci-row-formula">RQ ≈ 0.85 for mixed fuel</div>
+            </div>
+            <div>
+              <div class="sci-row-val" style="color:var(--chem)" id="dash-co2">—</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>🧬 Biology Summary</h2>
+      <div id="dash-bio-content">
+        <div class="empty" style="padding:20px">
+          <div style="color:var(--muted);font-size:0.9rem">Log your first run to see your biology breakdown.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>📈 Recent Runs</h2>
+      <div id="dash-recent"></div>
+    </div>
+  </div>
+
+  <!-- LOG RUN -->
+  <div id="view-log" class="view">
+    <div class="card">
+      <h2>📝 Log a Run</h2>
+      <div class="grid2">
+        <div class="form-group">
+          <label>Date</label>
+          <input type="date" id="runDate">
+        </div>
+        <div class="form-group">
+          <label>Run Name / Label</label>
+          <input type="text" id="runName" placeholder="e.g. Morning 5K, Easy Recovery">
+        </div>
+        <div class="form-group">
+          <label>Distance (miles)</label>
+          <input type="number" id="runDist" step="0.01" min="0.1" placeholder="3.1">
+        </div>
+        <div class="form-group">
+          <label>Duration (minutes)</label>
+          <input type="number" id="runTime" step="0.5" min="1" placeholder="28">
+        </div>
+        <div class="form-group">
+          <label>Body Weight (lbs)</label>
+          <input type="number" id="runWeight" step="1" placeholder="150">
+        </div>
+        <div class="form-group">
+          <label>Average Heart Rate (bpm) — optional</label>
+          <input type="number" id="runHR" step="1" placeholder="155">
+        </div>
+        <div class="form-group">
+          <label>Perceived Effort (1–10)</label>
+          <input type="number" id="runRPE" step="1" min="1" max="10" placeholder="6">
+        </div>
+        <div class="form-group">
+          <label>Terrain</label>
+          <select id="runTerrain">
+            <option value="flat">Flat road / track</option>
+            <option value="hills">Hilly road</option>
+            <option value="trail">Trail</option>
+            <option value="treadmill">Treadmill</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Notes (how did it feel?)</label>
+        <textarea id="runNotes" rows="2" placeholder="Breathing felt good, legs were heavy at mile 2..."></textarea>
+      </div>
+      <button class="btn" onclick="logRun()">⚗️ Log Run + Generate Science Breakdown</button>
+    </div>
+
+    <!-- LIVE PREVIEW -->
+    <div id="sciPreview" style="display:none">
+      <div class="card">
+        <h2><span class="badge phys">AP PHYSICS 1</span> Mechanics of Your Run</h2>
+        <div class="sci-panel">
+          <div class="grid2">
+            <div>
+              <div class="sci-row">
+                <div>
+                  <div class="sci-row-label">Velocity</div>
+                  <div class="sci-row-formula">v = d/t</div>
+                </div>
+                <div class="sci-row-val" style="color:var(--phys)" id="p-vel">—</div>
+              </div>
+              <div class="sci-row">
+                <div>
+                  <div class="sci-row-label">Momentum</div>
+                  <div class="sci-row-formula">p = mv</div>
+                </div>
+                <div class="sci-row-val" style="color:var(--phys)" id="p-mom">—</div>
+              </div>
+              <div class="sci-row">
+                <div>
+                  <div class="sci-row-label">Kinetic Energy (stride)</div>
+                  <div class="sci-row-formula">KE = ½mv²</div>
+                </div>
+                <div class="sci-row-val" style="color:var(--phys)" id="p-ke">—</div>
+              </div>
+            </div>
+            <div>
+              <div class="sci-row">
+                <div>
+                  <div class="sci-row-label">Work Done (total)</div>
+                  <div class="sci-row-formula">W = F·d (friction + grade)</div>
+                </div>
+                <div class="sci-row-val" style="color:var(--phys)" id="p-work">—</div>
+              </div>
+              <div class="sci-row">
+                <div>
+                  <div class="sci-row-label">Avg Power Output</div>
+                  <div class="sci-row-formula">P = W/t</div>
+                </div>
+                <div class="sci-row-val" style="color:var(--phys)" id="p-power">—</div>
+              </div>
+              <div class="sci-row">
+                <div>
+                  <div class="sci-row-label">Ground Reaction Force (est.)</div>
+                  <div class="sci-row-formula">~2.5× body weight per footstrike</div>
+                </div>
+                <div class="sci-row-val" style="color:var(--phys)" id="p-grf">—</div>
+              </div>
+            </div>
+          </div>
+          <div class="concept-box phys" id="p-concept"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2><span class="badge chem">AP CHEM</span> Cellular Energy & Respiration</h2>
+        <div class="sci-panel">
+          <div class="grid2">
+            <div>
+              <div class="sci-row">
+                <div>
+                  <div class="sci-row-label">kcal Burned (est.)</div>
+                  <div class="sci-row-formula">kcal ≈ 0.63 × wt(lb) × miles</div>
+                </div>
+                <div class="sci-row-val" style="color:var(--chem)" id="c-kcal">—</div>
+              </div>
+              <div class="sci-row">
+                <div>
+                  <div class="sci-row-label">O₂ Consumed</div>
+                  <div class="sci-row-formula">1L O₂ ≈ 5 kcal released</div>
+                </div>
+                <div class="sci-row-val" style="color:var(--chem)" id="c-o2">—</div>
+              </div>
+              <div class="sci-row">
+                <div>
+                  <div class="sci-row-label">CO₂ Produced</div>
+                  <div class="sci-row-formula">RQ ≈ 0.85 (mixed substrate)</div>
+                </div>
+                <div class="sci-row-val" style="color:var(--chem)" id="c-co2">—</div>
+              </div>
+            </div>
+            <div>
+              <div class="sci-row">
+                <div>
+                  <div class="sci-row-label">ATP Produced (aerobic)</div>
+                  <div class="sci-row-formula">~38 ATP per C₆H₁₂O₆</div>
+                </div>
+                <div class="sci-row-val" style="color:var(--chem)" id="c-atp">—</div>
+              </div>
+              <div class="sci-row">
+                <div>
+                  <div class="sci-row-label">Glucose Molecules Burned</div>
+                  <div class="sci-row-formula">1 glucose = 686 kcal (ΔG°)</div>
+                </div>
+                <div class="sci-row-val" style="color:var(--chem)" id="c-gluc">—</div>
+              </div>
+              <div class="sci-row">
+                <div>
+                  <div class="sci-row-label">Lactate Threshold Zone</div>
+                  <div class="sci-row-formula">Pyruvate → Lactate (anaerobic)</div>
+                </div>
+                <div class="sci-row-val" style="color:var(--chem)" id="c-lact">—</div>
+              </div>
+            </div>
+          </div>
+          <div id="c-rxn" style="background:rgba(0,0,0,0.2);border-radius:8px;padding:12px;margin-top:10px;font-family:monospace;font-size:0.8rem;color:var(--chem);text-align:center;"></div>
+          <div class="concept-box chem" id="c-concept"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2><span class="badge bio">AP BIO</span> Physiology & Adaptation</h2>
+        <div class="sci-panel">
+          <div class="grid2">
+            <div>
+              <div class="sci-row">
+                <div>
+                  <div class="sci-row-label">Dominant Muscle Fiber Type</div>
+                  <div class="sci-row-formula">Based on pace & duration</div>
+                </div>
+                <div class="sci-row-val" style="color:var(--bio)" id="b-fiber">—</div>
+              </div>
+              <div class="sci-row">
+                <div>
+                  <div class="sci-row-label">Est. VO₂ (mL/kg/min)</div>
+                  <div class="sci-row-formula">VO₂ = 3.5 × METs</div>
+                </div>
+                <div class="sci-row-val" style="color:var(--bio)" id="b-vo2">—</div>
+              </div>
+              <div class="sci-row">
+                <div>
+                  <div class="sci-row-label">Heart Rate Zone</div>
+                  <div class="sci-row-formula">% of max HR (220 − age est.)</div>
+                </div>
+                <div class="sci-row-val" style="color:var(--bio)" id="b-hrzone">—</div>
+              </div>
+            </div>
+            <div>
+              <div class="sci-row">
+                <div>
+                  <div class="sci-row-label">Cardiac Output Est. (L/min)</div>
+                  <div class="sci-row-formula">CO = HR × SV (SV ~70mL rest)</div>
+                </div>
+                <div class="sci-row-val" style="color:var(--bio)" id="b-co">—</div>
+              </div>
+              <div class="sci-row">
+                <div>
+                  <div class="sci-row-label">Stroke Volume Est. (mL)</div>
+                  <div class="sci-row-formula">↑ with aerobic training</div>
+                </div>
+                <div class="sci-row-val" style="color:var(--bio)" id="b-sv">—</div>
+              </div>
+              <div class="sci-row">
+                <div>
+                  <div class="sci-row-label">Mitochondrial Demand</div>
+                  <div class="sci-row-formula">Aerobic resp. site: inner membrane</div>
+                </div>
+                <div class="sci-row-val" style="color:var(--bio)" id="b-mito">—</div>
+              </div>
+            </div>
+          </div>
+          <div class="concept-box bio" id="b-concept"></div>
+        </div>
+
+        <div style="margin-top:16px">
+          <div style="font-size:0.8rem;color:var(--muted);margin-bottom:6px">Heart Rate Zone Gauge</div>
+          <div class="zone-bar">
+            <div class="zone-fill" id="hrGauge" style="width:0%;background:var(--bio)"></div>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-size:0.72rem;color:var(--muted)">
+            <span>Zone 1 (Recovery)</span>
+            <span>Zone 2 (Aerobic)</span>
+            <span>Zone 3 (Threshold)</span>
+            <span>Zone 5 (Max)</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- HISTORY -->
+  <div id="view-history" class="view">
+    <div class="card">
+      <h2>📚 Run History</h2>
+      <div id="historyList"></div>
+    </div>
+  </div>
+
+  <!-- SCIENCE LAB / CONCEPTS -->
+  <div id="view-concepts" class="view">
+    <div class="card">
+      <h2><span class="badge phys">AP PHYSICS 1</span> The Physics of Running</h2>
+      <div class="sci-panel">
+        <div class="concept-box phys">
+          <strong>Newton's Laws in Motion:</strong> Every footstrike creates a ground reaction force (≈2–3× body weight). By Newton's 3rd Law, the ground pushes back equally — this propels you forward. Your running efficiency depends on minimizing braking force and maximizing forward impulse (J = F·Δt).
+        </div>
+        <div class="concept-box phys" style="margin-top:8px">
+          <strong>Work & Energy:</strong> W = F·d. Running on hills increases work done against gravity (W = mgh). Flat running work ≈ overcoming air resistance + internal friction. Power output P = W/t tells you how "strong" your engine is — elite marathoners sustain ~300W.
+        </div>
+        <div class="concept-box phys" style="margin-top:8px">
+          <strong>Momentum & Impulse:</strong> p = mv. A heavier or faster runner has more momentum. Each stride cycle involves decelerating (losing momentum at contact) then accelerating (gaining it at push-off). Minimizing that loss = running economy.
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2><span class="badge chem">AP CHEM</span> Cellular Respiration Chemistry</h2>
+      <div class="sci-panel">
+        <div style="font-family:monospace;font-size:0.85rem;color:var(--chem);text-align:center;padding:12px;background:rgba(0,0,0,0.2);border-radius:8px;margin-bottom:12px">
+          C₆H₁₂O₆ + 6O₂ → 6CO₂ + 6H₂O + ~38 ATP (ΔG = −2870 kJ/mol)
+        </div>
+        <div class="concept-box chem">
+          <strong>Glycolysis (cytoplasm):</strong> Glucose → 2 pyruvate + 2 ATP + 2 NADH. This happens whether or not O₂ is present. At easy paces this feeds the aerobic pathway. At hard efforts, pyruvate → lactate (lactic acid) to regenerate NAD⁺ and keep glycolysis running — this is the "burn" you feel.
+        </div>
+        <div class="concept-box chem" style="margin-top:8px">
+          <strong>Krebs Cycle (mitochondrial matrix):</strong> Each acetyl-CoA yields 2CO₂, 3NADH, 1FADH₂, 1 ATP. Your CO₂ output directly reflects this cycle's activity — your respiratory rate is literally a readout of the Krebs cycle speed.
+        </div>
+        <div class="concept-box chem" style="margin-top:8px">
+          <strong>Oxidative Phosphorylation (inner mitochondrial membrane):</strong> NADH/FADH₂ donate electrons to the electron transport chain → H⁺ gradient → ATP synthase produces ~34 ATP. O₂ is the final electron acceptor. Without O₂, the whole chain halts — hence the importance of breathing.
+        </div>
+        <div class="concept-box chem" style="margin-top:8px">
+          <strong>Buffer Chemistry:</strong> CO₂ + H₂O ⇌ H₂CO₃ ⇌ H⁺ + HCO₃⁻. During hard runs, CO₂ rises → blood pH drops → you breathe harder. This is your body's bicarbonate buffer system (Henderson–Hasselbalch equation) in real time.
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2><span class="badge bio">AP BIO</span> Physiology & Adaptation</h2>
+      <div class="sci-panel">
+        <div class="concept-box bio">
+          <strong>Muscle Fiber Types:</strong> Type I (slow-twitch) — high mitochondria density, fatigue-resistant, aerobic. Type IIa (fast-twitch oxidative) — mixed. Type IIx (fast-twitch glycolytic) — powerful, fatigue quickly. Easy runs train Type I; sprint intervals recruit Type II. Endurance training causes Type IIx → IIa conversion.
+        </div>
+        <div class="concept-box bio" style="margin-top:8px">
+          <strong>Cardiovascular Adaptation:</strong> Cardiac output = HR × Stroke Volume (Q = HR × SV). Training increases SV (heart gets bigger, pumps more per beat) — your resting HR drops. Elite runners have resting HR ~40 bpm vs ~70 average. Each beat delivers more O₂ to working muscles.
+        </div>
+        <div class="concept-box bio" style="margin-top:8px">
+          <strong>VO₂ Max:</strong> Maximum rate of O₂ consumption (mL O₂/kg/min). Determined by cardiac output × arteriovenous O₂ difference (Fick principle). Untrained: ~35–45. Trained: 50–70. Elite marathoners: 70–85+. Training increases mitochondrial density (more ETC capacity) and capillary density.
+        </div>
+        <div class="concept-box bio" style="margin-top:8px">
+          <strong>Hormonal Response:</strong> Epinephrine (adrenaline) → ↑HR, ↑glycogen breakdown. Cortisol → mobilizes fats. Testosterone/GH → muscle repair post-run. Endorphins → bind opioid receptors → "runner's high." All mediated through signal transduction cascades you'll master in AP Bio.
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<!-- MODAL for run detail -->
+<div class="modal-overlay" id="runModal">
+  <div class="modal">
+    <div class="modal-title">
+      <span id="modal-title">Run Detail</span>
+      <button class="close-btn" onclick="closeModal()">✕</button>
+    </div>
+    <div id="modal-content"></div>
+  </div>
+</div>
+
+<script>
+// ─── DATA ───────────────────────────────────────────────
+let runs = JSON.parse(localStorage.getItem('scirun_runs') || '[]');
+
+function saveRuns() {
+  localStorage.setItem('scirun_runs', JSON.stringify(runs));
+}
+
+// ─── SCIENCE FACTS ──────────────────────────────────────
+const facts = [
+  "⚗️ AP CHEM: Your muscles produce ~38 ATP per glucose molecule during aerobic respiration via oxidative phosphorylation.",
+  "⚡ AP PHYSICS: The ground reaction force during running is ~2.5× your body weight per footstrike.",
+  "🧬 AP BIO: Slow-twitch (Type I) muscle fibers have up to 3× more mitochondria than fast-twitch fibers.",
+  "🧪 AP CHEM: CO₂ from your Krebs cycle dissolves in blood → carbonic acid → lowers pH → you breathe harder.",
+  "⚡ AP PHYSICS: Running economy improves when you minimize the braking impulse at each footstrike (J = F·Δt).",
+  "🧬 AP BIO: VO₂ max is limited by cardiac output (Q = HR × SV) and the Fick principle.",
+  "⚗️ AP CHEM: The bicarbonate buffer system (H₂CO₃ ⇌ H⁺ + HCO₃⁻) prevents blood pH from crashing during hard runs.",
+  "⚡ AP PHYSICS: Power output P = W/t. Elite marathoners sustain ~300W for 2+ hours.",
+  "🧬 AP BIO: Endurance training converts Type IIx (glycolytic) → Type IIa (oxidative) fibers over 8–12 weeks.",
+  "⚗️ AP CHEM: Glycolysis produces 2 ATP per glucose — only 5% of aerobic yield. You need O₂ for the other 95%.",
+  "⚡ AP PHYSICS: Your momentum p = mv. A 70kg runner at 3 m/s has 210 kg·m/s of momentum.",
+  "🧬 AP BIO: Epinephrine (adrenaline) triggers glycogen breakdown via cAMP second messenger cascade during runs.",
+];
+
+function showFact() {
+  const idx = Math.floor(Math.random() * facts.length);
+  document.getElementById('factText').textContent = facts[idx];
+}
+
+// ─── NAV ────────────────────────────────────────────────
+function showView(name) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('view-' + name).classList.add('active');
+  event.target.classList.add('active');
+  if (name === 'dashboard') updateDashboard();
+  if (name === 'history') renderHistory();
+}
+
+// ─── CALCULATIONS ───────────────────────────────────────
+function calcScience(dist_miles, time_min, weight_lbs, hr, rpe, terrain) {
+  const dist_m = dist_miles * 1609.34;
+  const time_s = time_min * 60;
+  const mass_kg = weight_lbs * 0.453592;
+  const v_ms = dist_m / time_s; // m/s
+  const v_mph = dist_miles / (time_min / 60);
+
+  // PHYSICS
+  const mu = terrain === 'flat' ? 0.01 : terrain === 'hills' ? 0.05 : terrain === 'trail' ? 0.03 : 0.008;
+  const g = 9.81;
+  const F_friction = mass_kg * g * mu;
+  const F_airdrag = 0.5 * 1.225 * 0.45 * v_ms * v_ms; // ρ·Cd·A·v²
+  const F_total = F_friction + F_airdrag + (mass_kg * g * 0.005);
+  const work_J = F_total * dist_m;
+  const power_W = work_J / time_s;
+  const ke_J = 0.5 * mass_kg * v_ms * v_ms;
+  const momentum = mass_kg * v_ms;
+  const grf_N = mass_kg * g * 2.5;
+
+  // CHEM
+  const kcal = 0.63 * weight_lbs * dist_miles;
+  const o2_L = kcal / 5;
+  const co2_L = o2_L * 0.85;
+  const glucose_mol = kcal / 686;
+  const atp_mol = glucose_mol * 38;
+  const atp_count = atp_mol * 6.022e23;
+
+  // Lactate determination
+  const pace_min_mi = time_min / dist_miles;
+  let lactZone = '';
+  if (rpe <= 4) lactZone = 'Aerobic (low lactate, ~1–2 mmol/L)';
+  else if (rpe <= 6) lactZone = 'Moderate (lactate clearing ~2–3 mmol/L)';
+  else if (rpe <= 8) lactZone = 'Threshold (4 mmol/L — pyruvate ⇌ lactate balanced)';
+  else lactZone = 'Anaerobic (>4 mmol/L — lactate accumulating)';
+
+  // BIO
+  const mets = 3.5 + (v_ms * 3.5 / 3.5);
+  const vo2 = 3.5 * mets;
+  const hrMax = 200; // generic estimate
+  const hrPct = hr ? (hr / hrMax * 100) : (rpe * 10);
+  let hrZone = '';
+  if (hrPct < 60) hrZone = 'Zone 1 — Recovery';
+  else if (hrPct < 70) hrZone = 'Zone 2 — Aerobic Base';
+  else if (hrPct < 80) hrZone = 'Zone 3 — Tempo';
+  else if (hrPct < 90) hrZone = 'Zone 4 — Threshold';
+  else hrZone = 'Zone 5 — Max Effort';
+
+  const sv_ml = hr ? Math.min(200, 70 + (200 - hr) * 0.5) : 90;
+  const cardiac_out = hr ? (hr * sv_ml / 1000) : 0;
+
+  let fiber = '';
+  if (pace_min_mi > 10) fiber = 'Type I (Slow-twitch, aerobic)';
+  else if (pace_min_mi > 7) fiber = 'Type I + IIa (Mixed aerobic)';
+  else fiber = 'Type IIa + IIx (Fast-twitch engaged)';
+
+  let mito = rpe >= 7 ? 'High demand — ETC near capacity' : rpe >= 4 ? 'Moderate — Krebs cycling steadily' : 'Low — aerobic, efficient';
+
+  return {
+    v_ms, v_mph, pace_min_mi, dist_m, dist_miles, time_s, mass_kg,
+    work_J, power_W, ke_J, momentum, grf_N, F_total,
+    kcal, o2_L, co2_L, glucose_mol, atp_mol, atp_count, lactZone,
+    mets, vo2, hrPct, hrZone, sv_ml, cardiac_out, fiber, mito, hr, rpe
+  };
+}
+
+function fmt(n, dec=1) {
+  if (n >= 1e24) return (n/6.022e23).toExponential(2) + ' mol';
+  if (n >= 1e9) return (n/1e9).toFixed(1) + 'B';
+  if (n >= 1e6) return (n/1e6).toFixed(1) + 'M';
+  return Number(n).toFixed(dec);
+}
+
+// ─── LOG RUN ────────────────────────────────────────────
+function logRun() {
+  const dist = parseFloat(document.getElementById('runDist').value);
+  const time = parseFloat(document.getElementById('runTime').value);
+  const weight = parseFloat(document.getElementById('runWeight').value);
+  const hr = parseFloat(document.getElementById('runHR').value) || 0;
+  const rpe = parseFloat(document.getElementById('runRPE').value) || 5;
+  const terrain = document.getElementById('runTerrain').value;
+  const date = document.getElementById('runDate').value || new Date().toISOString().slice(0,10);
+  const name = document.getElementById('runName').value || `${dist}mi Run`;
+  const notes = document.getElementById('runNotes').value;
+
+  if (!dist || !time || !weight) {
+    alert('Please enter distance, duration, and body weight.');
+    return;
+  }
+
+  const sci = calcScience(dist, time, weight, hr, rpe, terrain);
+  const run = { id: Date.now(), date, name, dist, time, weight, hr, rpe, terrain, notes, sci };
+  runs.unshift(run);
+  saveRuns();
+  renderSciPreview(sci);
+  document.getElementById('sciPreview').style.display = 'block';
+  window.scrollTo({ top: document.getElementById('sciPreview').offsetTop - 80, behavior: 'smooth' });
+}
+
+function renderSciPreview(s) {
+  const pace = `${Math.floor(s.pace_min_mi)}:${String(Math.round((s.pace_min_mi%1)*60)).padStart(2,'0')}/mi`;
+
+  // Physics
+  document.getElementById('p-vel').textContent = `${fmt(s.v_ms,2)} m/s (${fmt(s.v_mph,1)} mph)`;
+  document.getElementById('p-mom').textContent = `${fmt(s.momentum,0)} kg·m/s`;
+  document.getElementById('p-ke').textContent = `${fmt(s.ke_J,0)} J`;
+  document.getElementById('p-work').textContent = `${fmt(s.work_J/1000,1)} kJ`;
+  document.getElementById('p-power').textContent = `${fmt(s.power_W,0)} W`;
+  document.getElementById('p-grf').textContent = `${fmt(s.grf_N,0)} N`;
+  document.getElementById('p-concept').textContent =
+    `At ${pace} pace, you generated ${fmt(s.power_W,0)} watts of sustained power — comparable to a bright incandescent light bulb. Your kinetic energy per stride (${fmt(s.ke_J,0)} J) must be re-acquired each step, which is why running economy (minimizing energy loss at footstrike) matters so much. Every footstrike delivers ~${fmt(s.grf_N,0)} N of force to your bones — that's why bone density adapts over months of training.`;
+
+  // Chem
+  document.getElementById('c-kcal').textContent = `${fmt(s.kcal,0)} kcal`;
+  document.getElementById('c-o2').textContent = `${fmt(s.o2_L,1)} L`;
+  document.getElementById('c-co2').textContent = `${fmt(s.co2_L,1)} L`;
+  document.getElementById('c-atp').textContent = `~${fmt(s.atp_mol*6.022e23/1e21,0)} × 10²¹`;
+  document.getElementById('c-gluc').textContent = `~${fmt(s.glucose_mol,3)} mol`;
+  document.getElementById('c-lact').textContent = s.lactZone.split('(')[0].trim();
+  document.getElementById('c-rxn').textContent =
+    `${fmt(s.glucose_mol,3)} C₆H₁₂O₆  +  ${fmt(s.o2_L/22.4,2)} mol O₂  →  ${fmt(s.co2_L/22.4,2)} mol CO₂  +  H₂O  +  ~${fmt(s.atp_mol,2)} mol ATP`;
+  document.getElementById('c-concept').textContent =
+    `RPE ${s.rpe} → ${s.lactZone}. You consumed ${fmt(s.o2_L,1)}L of O₂ and produced ${fmt(s.co2_L,1)}L of CO₂ — your respiratory exchange ratio tells us you burned a mix of carbs and fat. That CO₂ entered your blood as carbonic acid (CO₂ + H₂O → H₂CO₃ → H⁺ + HCO₃⁻), triggering your bicarbonate buffer and drive to breathe harder.`;
+
+  // Bio
+  document.getElementById('b-fiber').textContent = s.fiber;
+  document.getElementById('b-vo2').textContent = `~${fmt(s.vo2,0)} mL/kg/min`;
+  document.getElementById('b-hrzone').textContent = s.hrZone;
+  document.getElementById('b-co').textContent = s.hr ? `${fmt(s.cardiac_out,1)} L/min` : 'Enter HR';
+  document.getElementById('b-sv').textContent = s.hr ? `~${fmt(s.sv_ml,0)} mL` : 'Enter HR';
+  document.getElementById('b-mito').textContent = s.mito;
+  document.getElementById('b-concept').textContent =
+    `Your estimated METs: ${fmt(s.mets,1)} → VO₂ ≈ ${fmt(s.vo2,0)} mL/kg/min. Dominant fiber type: ${s.fiber}. ${s.rpe >= 7 ? 'At this intensity, your ETC is near capacity — mitochondria are producing ATP as fast as electron donors (NADH/FADH₂) can be supplied. Sustained training at this intensity increases mitochondrial density and capillary supply.' : 'At this easy intensity, Type I fibers handle most of the load — ideal for building aerobic base and mitochondrial adaptations without excessive cortisol stress.'}`;
+  document.getElementById('hrGauge').style.width = Math.min(100, s.hrPct) + '%';
+}
+
+// ─── DASHBOARD ──────────────────────────────────────────
+function updateDashboard() {
+  document.getElementById('totalRuns').textContent = runs.length;
+  const totalMi = runs.reduce((a,r) => a+r.dist,0);
+  const totalKcal = runs.reduce((a,r) => a+(r.sci ? r.sci.kcal : 0),0);
+  document.getElementById('totalMiles').textContent = totalMi.toFixed(1);
+  document.getElementById('totalKcal').textContent = Math.round(totalKcal);
+
+  if (runs.length > 0) {
+    const avg = r => runs.reduce((a,x) => a+(x.sci?x.sci[r]:0),0)/runs.length;
+    document.getElementById('dash-work').textContent = fmt(avg('work_J')/1000,1) + ' kJ avg';
+    document.getElementById('dash-power').textContent = fmt(avg('power_W'),0) + ' W avg';
+    document.getElementById('dash-ke').textContent = fmt(avg('ke_J'),0) + ' J avg';
+    const totalO2 = runs.reduce((a,r)=>a+(r.sci?r.sci.o2_L:0),0);
+    const totalCO2 = runs.reduce((a,r)=>a+(r.sci?r.sci.co2_L:0),0);
+    const totalATP = runs.reduce((a,r)=>a+(r.sci?r.sci.atp_mol:0),0);
+    document.getElementById('dash-atp').textContent = `~${fmt(totalATP*6.022e23/1e21,0)} × 10²¹`;
+    document.getElementById('dash-o2').textContent = fmt(totalO2,1) + ' L total';
+    document.getElementById('dash-co2').textContent = fmt(totalCO2,1) + ' L total';
+
+    const avgVO2 = avg('vo2');
+    const avgFiber = runs[0].sci ? runs[0].sci.fiber : '—';
+    document.getElementById('dash-bio-content').innerHTML = `
+      <div class="grid3">
+        <div class="sci-panel">
+          <div style="font-size:0.75rem;color:var(--muted)">Est. VO₂ (latest)</div>
+          <div style="font-size:1.4rem;font-weight:800;color:var(--bio)">${fmt(avgVO2,0)}</div>
+          <div style="font-size:0.72rem;color:var(--muted)">mL/kg/min</div>
+        </div>
+        <div class="sci-panel">
+          <div style="font-size:0.75rem;color:var(--muted)">Dominant Fiber (latest)</div>
+          <div style="font-size:0.95rem;font-weight:700;color:var(--bio);margin-top:4px">${avgFiber}</div>
+        </div>
+        <div class="sci-panel">
+          <div style="font-size:0.75rem;color:var(--muted)">Runs Logged</div>
+          <div style="font-size:1.4rem;font-weight:800;color:var(--bio)">${runs.length}</div>
+          <div style="font-size:0.72rem;color:var(--muted)">sessions tracked</div>
+        </div>
+      </div>`;
+
+    const recent = runs.slice(0,3);
+    document.getElementById('dash-recent').innerHTML = recent.map(r => runCard(r)).join('');
+  } else {
+    document.getElementById('dash-work').textContent = '—';
+    document.getElementById('dash-power').textContent = '—';
+    document.getElementById('dash-ke').textContent = '—';
+    document.getElementById('dash-atp').textContent = '—';
+    document.getElementById('dash-o2').textContent = '—';
+    document.getElementById('dash-co2').textContent = '—';
+    document.getElementById('dash-recent').innerHTML = `<div class="empty"><div class="empty-icon">🏃</div><p>No runs yet. Hit "Log Run" to start.</p></div>`;
+  }
+}
+
+function runCard(r) {
+  const pace = r.time && r.dist ? `${Math.floor(r.time/r.dist)}:${String(Math.round(((r.time/r.dist)%1)*60)).padStart(2,'0')}/mi` : '—';
+  return `<div class="run-item" onclick="showRunDetail(${r.id})">
+    <div class="run-item-header">
+      <div class="run-item-title">${r.name}</div>
+      <div class="run-item-date">${r.date}</div>
+    </div>
+    <div class="run-item-stats">
+      <div class="run-stat"><span>${r.dist} mi</span></div>
+      <div class="run-stat"><span>${r.time} min</span></div>
+      <div class="run-stat"><span>${pace}</span></div>
+      ${r.sci ? `<div class="run-stat"><span>${Math.round(r.sci.kcal)} kcal</span></div>` : ''}
+      ${r.sci ? `<div class="run-stat"><span>${Math.round(r.sci.power_W)}W</span></div>` : ''}
+    </div>
+  </div>`;
+}
+
+// ─── HISTORY ────────────────────────────────────────────
+function renderHistory() {
+  const el = document.getElementById('historyList');
+  if (runs.length === 0) {
+    el.innerHTML = `<div class="empty"><div class="empty-icon">📋</div><p>No runs logged yet.</p></div>`;
+    return;
+  }
+  el.innerHTML = runs.map(r => runCard(r)).join('');
+}
+
+// ─── MODAL ──────────────────────────────────────────────
+function showRunDetail(id) {
+  const r = runs.find(x => x.id === id);
+  if (!r || !r.sci) return;
+  const s = r.sci;
+  const pace = `${Math.floor(s.pace_min_mi)}:${String(Math.round((s.pace_min_mi%1)*60)).padStart(2,'0')}/mi`;
+  document.getElementById('modal-title').textContent = `${r.name} — ${r.date}`;
+  document.getElementById('modal-content').innerHTML = `
+    <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px">
+      <div class="stat-card" style="flex:1;min-width:100px"><div class="stat-num">${r.dist}</div><div class="stat-label">Miles</div></div>
+      <div class="stat-card" style="flex:1;min-width:100px"><div class="stat-num">${r.time}</div><div class="stat-label">Minutes</div></div>
+      <div class="stat-card" style="flex:1;min-width:100px"><div class="stat-num">${pace}</div><div class="stat-label">Pace</div></div>
+      <div class="stat-card" style="flex:1;min-width:100px"><div class="stat-num">${Math.round(s.kcal)}</div><div class="stat-label">kcal</div></div>
+    </div>
+    <div style="background:var(--surface2);border-radius:12px;padding:14px;margin-bottom:12px">
+      <div style="font-size:0.75rem;color:var(--phys);font-weight:700;margin-bottom:8px">⚡ PHYSICS</div>
+      <div class="sci-row"><div class="sci-row-label">Power</div><div class="sci-row-val" style="color:var(--phys)">${fmt(s.power_W,0)} W</div></div>
+      <div class="sci-row"><div class="sci-row-label">Work done</div><div class="sci-row-val" style="color:var(--phys)">${fmt(s.work_J/1000,1)} kJ</div></div>
+      <div class="sci-row"><div class="sci-row-label">Momentum</div><div class="sci-row-val" style="color:var(--phys)">${fmt(s.momentum,0)} kg·m/s</div></div>
+    </div>
+    <div style="background:var(--surface2);border-radius:12px;padding:14px;margin-bottom:12px">
+      <div style="font-size:0.75rem;color:var(--chem);font-weight:700;margin-bottom:8px">⚗️ CHEMISTRY</div>
+      <div class="sci-row"><div class="sci-row-label">O₂ consumed</div><div class="sci-row-val" style="color:var(--chem)">${fmt(s.o2_L,1)} L</div></div>
+      <div class="sci-row"><div class="sci-row-label">CO₂ produced</div><div class="sci-row-val" style="color:var(--chem)">${fmt(s.co2_L,1)} L</div></div>
+      <div class="sci-row"><div class="sci-row-label">Lactate zone</div><div class="sci-row-val" style="color:var(--chem);font-size:0.8rem">${s.lactZone.split('(')[0].trim()}</div></div>
+    </div>
+    <div style="background:var(--surface2);border-radius:12px;padding:14px;margin-bottom:12px">
+      <div style="font-size:0.75rem;color:var(--bio);font-weight:700;margin-bottom:8px">🧬 BIOLOGY</div>
+      <div class="sci-row"><div class="sci-row-label">Est. VO₂</div><div class="sci-row-val" style="color:var(--bio)">${fmt(s.vo2,0)} mL/kg/min</div></div>
+      <div class="sci-row"><div class="sci-row-label">Muscle fibers</div><div class="sci-row-val" style="color:var(--bio);font-size:0.8rem">${s.fiber}</div></div>
+      <div class="sci-row"><div class="sci-row-label">HR Zone</div><div class="sci-row-val" style="color:var(--bio);font-size:0.8rem">${s.hrZone}</div></div>
+    </div>
+    ${r.notes ? `<div class="concept-box bio">📝 ${r.notes}</div>` : ''}
+    <button class="btn" style="background:var(--danger);margin-top:16px" onclick="deleteRun(${r.id})">Delete Run</button>
+  `;
+  document.getElementById('runModal').classList.add('open');
+}
+
+function closeModal() {
+  document.getElementById('runModal').classList.remove('open');
+}
+
+function deleteRun(id) {
+  runs = runs.filter(r => r.id !== id);
+  saveRuns();
+  closeModal();
+  renderHistory();
+  updateDashboard();
+}
+
+// ─── INIT ───────────────────────────────────────────────
+document.getElementById('runDate').value = new Date().toISOString().slice(0,10);
+showFact();
+setInterval(showFact, 12000);
+updateDashboard();
+</script>
+</body>
+</html>
